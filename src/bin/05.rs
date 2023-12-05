@@ -1,8 +1,6 @@
-use itertools::Itertools;
+use std::collections::HashSet;
 
-// Part2 is bruteforcable in ~2min in Rust. I believe there is a nice performant
-// solution by combining the maps into one map (see GardeningMap.combine_with_map()).
-// If I do a performance refactor, then I will add this.
+use itertools::Itertools;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct GardeningTranslationRange {
@@ -15,6 +13,13 @@ impl GardeningTranslationRange {
     fn translate(&self, value: i64) -> Option<i64> {
         if (self.source_start..self.source_end).contains(&value) {
             return Some(value + self.offset);
+        }
+        None
+    }
+
+    fn translate_range(&self, value: Range) -> Option<Range> {
+        if (self.source_start..self.source_end).contains(&value.from) {
+            return Some(Range::new(value.from + self.offset, value.to + self.offset));
         }
         None
     }
@@ -47,52 +52,13 @@ impl GardeningMap {
         value
     }
 
-    fn combine_with_map(self, other: GardeningMap) -> GardeningMap {
-        // FIX: this code will split ranges, but just add up the offsets
-        // This is obviously wrong. Will fix this, if I do a performance refactoring.
-        let mut range_points = vec![];
-        for r in &self.ranges {
-            range_points.push((r.source_start, true, r.offset));
-            range_points.push((r.source_end, false, r.offset));
-        }
-        for r in &other.ranges {
-            range_points.push((r.source_start, true, r.offset));
-            range_points.push((r.source_end, false, r.offset));
-        }
-        range_points.sort();
-
-        let mut result_ranges = vec![];
-        let mut last_start = range_points.first().unwrap().0;
-        let mut current_offset = range_points.first().unwrap().2;
-        for (p, is_start, offset) in range_points.iter().skip(1) {
-            if *is_start {
-                if *p > last_start {
-                    result_ranges.push(GardeningTranslationRange {
-                        source_start: last_start,
-                        source_end: *p,
-                        offset: current_offset,
-                    });
-                }
-                current_offset += offset;
-                last_start = *p;
-            } else {
-                if *p > last_start {
-                    result_ranges.push(GardeningTranslationRange {
-                        source_start: last_start,
-                        source_end: *p,
-                        offset: current_offset,
-                    });
-                }
-                current_offset -= offset;
-                last_start = *p;
+    fn translate_range(&self, value: &Range) -> Range {
+        for range in self.ranges.iter() {
+            if let Some(tv) = range.translate_range(value.clone()) {
+                return tv;
             }
         }
-
-        GardeningMap {
-            _source_tag: self._source_tag.clone(),
-            _destination_tag: other._destination_tag.clone(),
-            ranges: result_ranges,
-        }
+        value.clone()
     }
 }
 
@@ -103,6 +69,53 @@ impl From<((&str, &str), Vec<GardeningTranslationRange>)> for GardeningMap {
             _destination_tag: value.0 .1.to_string(),
             ranges: value.1,
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Range {
+    from: i64,
+    to: i64,
+}
+
+impl Range {
+    fn new(from: i64, to: i64) -> Self {
+        Self { from, to }
+    }
+
+    fn from_seedlist(seeds: Vec<i64>) -> Vec<Self> {
+        seeds
+            .into_iter()
+            .tuples::<(_, _)>()
+            .map(|(from, length)| Self::new(from, from + length))
+            .collect_vec()
+    }
+
+    fn split_according_to_map(&self, map: &GardeningMap) -> Vec<Self> {
+        let mut new_ranges = vec![];
+
+        let mut splitpoints: HashSet<i64> = HashSet::new();
+        for m in &map.ranges {
+            splitpoints.insert(m.source_start);
+            splitpoints.insert(m.source_end);
+        }
+
+        let mut current = self.from;
+        for sp in splitpoints.into_iter().sorted() {
+            if sp < current {
+                continue;
+            }
+            if sp > self.to {
+                break;
+            }
+            new_ranges.push(Self::new(current, sp));
+            current = sp;
+        }
+        if current < self.to {
+            new_ranges.push(Self::new(current, self.to));
+        }
+
+        new_ranges
     }
 }
 
@@ -177,25 +190,22 @@ pub fn part_one(_input: &str) -> Option<i64> {
 pub fn part_two(_input: &str) -> Option<i64> {
     let (seeds, maps) = parser::parse_instructions(_input).unwrap();
 
-    /*  let combined_map = maps
-          .into_iter()
-          .reduce(|m, o| m.combine_with_map(o))
-          .unwrap();
-    */
+    let mut rangelist = Range::from_seedlist(seeds);
 
-    let translated_seeds = seeds
-        .iter()
-        .tuples::<(_, _)>()
-        .flat_map(|(s_start, s_length)| (*s_start..(s_start + s_length)).collect_vec())
-        .map(|s| {
-            let mut ts = s;
-            for map in maps.iter() {
-                ts = map.translate(ts);
-            }
-            ts
-        })
-        .collect_vec();
-    Some(*translated_seeds.iter().min().unwrap())
+    for m in maps {
+        let mut new_rangelist: Vec<Range> = vec![];
+        for r in &rangelist {
+            let split_ranges = r.split_according_to_map(&m);
+            let translated_ranges = split_ranges
+                .iter()
+                .map(|sr| m.translate_range(sr))
+                .collect_vec();
+            new_rangelist.extend(translated_ranges);
+        }
+        rangelist = new_rangelist;
+    }
+
+    rangelist.iter().map(|r| r.from).min()
 }
 
 fn main() {
@@ -218,52 +228,5 @@ mod tests {
     fn test_part_two() {
         let input = advent_of_code::read_file("examples", 5);
         assert_eq!(part_two(&input), Some(46));
-    }
-
-    #[test]
-    fn test_combine_maps() {
-        let map1 = GardeningMap {
-            _source_tag: "test".to_string(),
-            _destination_tag: "bla".to_string(),
-            ranges: vec![GardeningTranslationRange {
-                source_start: 10,
-                source_end: 20,
-                offset: 10,
-            }],
-        };
-        let map2 = GardeningMap {
-            _source_tag: "bla".to_string(),
-            _destination_tag: "blubb".to_string(),
-            ranges: vec![GardeningTranslationRange {
-                source_start: 15,
-                source_end: 25,
-                offset: -20,
-            }],
-        };
-
-        assert_eq!(
-            map1.combine_with_map(map2),
-            GardeningMap {
-                _source_tag: "test".to_string(),
-                _destination_tag: "blubb".to_string(),
-                ranges: vec![
-                    GardeningTranslationRange {
-                        source_start: 10,
-                        source_end: 15,
-                        offset: 10,
-                    },
-                    GardeningTranslationRange {
-                        source_start: 15,
-                        source_end: 20,
-                        offset: -10,
-                    },
-                    GardeningTranslationRange {
-                        source_start: 20,
-                        source_end: 25,
-                        offset: -20,
-                    },
-                ],
-            }
-        );
     }
 }
