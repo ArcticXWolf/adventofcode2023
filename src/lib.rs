@@ -1,4 +1,5 @@
 #![feature(step_trait)]
+#![feature(iter_order_by)]
 /*
  * This file contains template code.
  * There is no need to edit this file unless you want to change template functionality.
