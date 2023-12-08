@@ -3,6 +3,19 @@ use std::collections::HashMap;
 use advent_of_code::helpers::lcm_mn;
 use itertools::Itertools;
 
+// My initial solution had more complex structs and code like the cycle
+// detector.  This brought my performance down significantly and still was no
+// general solution for the problem. For example:
+//   1. what if there are multiple ending states per cycle?
+//   2. what if the ending states are not at the end of a cycle?
+//   3. what if the cycle does not begin at the starting state?
+// I am sure you can solve this generally by clever adaptations of the lcm
+// algorithm, but since the input in question is pretty nice and does not hit
+// the above problems I decided to simplify my solution for performance. That is
+// why I have no cycle detection and just assume that the path loops after an
+// ending state. I did check this property on my input beforehand.  Lastly, the
+// code of the proper cycle detection is in the previous commit.
+
 #[derive(Debug)]
 pub enum Instruction {
     Right,
@@ -44,56 +57,18 @@ impl NodeMap {
         }
         unreachable!()
     }
-}
 
-#[derive(Debug)]
-struct CycleDetector {
-    path_tracer: Vec<Vec<(usize, String)>>,
-    found_cycles: Vec<Option<(usize, usize)>>, // (cycle_lenth, offset)
-    ending_state_offsets: Vec<usize>,
-}
+    fn follow_path(&self, instructions: &[Instruction], starting_node: &str, part2: bool) -> usize {
+        let mut current_node = starting_node;
+        let mut instruction_iterator = instructions.iter().cycle();
+        let mut counter = 0;
 
-impl CycleDetector {
-    fn new(starting_nodes: &[&str]) -> Self {
-        let mut path_tracer = vec![];
-        let mut found_cycles = vec![];
-        let mut ending_state_offsets = vec![];
-
-        for _ in starting_nodes {
-            path_tracer.push(vec![]);
-            found_cycles.push(None);
-            ending_state_offsets.push(0);
+        while !current_node.ends_with(if part2 { "Z" } else { "ZZZ" }) {
+            current_node = self.go_instruction(current_node, instruction_iterator.next().unwrap());
+            counter += 1;
         }
 
-        Self {
-            path_tracer,
-            found_cycles,
-            ending_state_offsets,
-        }
-    }
-
-    fn detect_cycles(&mut self, current_nodes: &[&str], instruction_cycle_offset: usize) -> bool {
-        for (idx, c) in current_nodes.iter().enumerate() {
-            if self.found_cycles[idx].is_some() {
-                continue;
-            }
-
-            if self.path_tracer[idx].contains(&(instruction_cycle_offset, c.to_string())) {
-                let cycle_offset = self.path_tracer[idx]
-                    .iter()
-                    .position(|e| *e == (instruction_cycle_offset, c.to_string()))
-                    .unwrap();
-                let cycle_length = self.path_tracer[idx].len() - cycle_offset;
-                self.found_cycles[idx] = Some((cycle_length, cycle_offset));
-            } else {
-                if c.ends_with("Z") {
-                    self.ending_state_offsets[idx] = self.path_tracer[idx].len();
-                }
-                self.path_tracer[idx].push((instruction_cycle_offset, c.to_string()));
-            }
-        }
-
-        self.found_cycles.iter().all(|c| c.is_some())
+        counter
     }
 }
 
@@ -154,53 +129,28 @@ mod parser {
     }
 }
 
-pub fn part_one(_input: &str) -> Option<u32> {
+pub fn part_one(_input: &str) -> Option<usize> {
     let (instructions, map) = parser::parse(_input.trim()).unwrap();
-
-    let mut current_node = "AAA";
-    let mut instruction_iterator = instructions.iter().cycle();
-    let mut counter = 0;
-
-    while current_node != "ZZZ" {
-        current_node = map.go_instruction(current_node, instruction_iterator.next().unwrap());
-        counter += 1;
-    }
-
-    Some(counter)
+    Some(map.follow_path(&instructions, "AAA", false))
 }
 
-pub fn part_two(_input: &str) -> Option<u64> {
+pub fn part_two(_input: &str) -> Option<usize> {
     let (instructions, map) = parser::parse(_input.trim()).unwrap();
 
-    let mut current_nodes = map
+    let starting_nodes = map
         .0
         .keys()
         .map(|s| s.as_str())
         .filter(|s| s.ends_with("A"))
         .sorted()
         .collect_vec();
-    let mut instruction_iterator = instructions.iter().enumerate().cycle();
-    let mut cycle_detector = CycleDetector::new(&current_nodes);
 
-    loop {
-        let (instruction_cycle_idx, instruction) = instruction_iterator.next().unwrap();
-        current_nodes = current_nodes
-            .iter()
-            .map(|c| map.go_instruction(c, instruction))
-            .collect_vec();
+    let cycles = starting_nodes
+        .iter()
+        .map(|sn| map.follow_path(&instructions, sn, true))
+        .collect_vec();
 
-        if cycle_detector.detect_cycles(&current_nodes, instruction_cycle_idx) {
-            break;
-        }
-    }
-
-    Some(lcm_mn(
-        &cycle_detector
-            .found_cycles
-            .iter()
-            .map(|c| c.unwrap().0)
-            .collect_vec(),
-    ) as u64)
+    Some(lcm_mn(&cycles))
 }
 
 fn main() {
