@@ -1,3 +1,11 @@
+pub fn lcm_mn(numbers: &Vec<usize>) -> usize {
+    numbers
+        .clone()
+        .into_iter()
+        .reduce(|acc, n| lcm(acc, n))
+        .unwrap()
+}
+
 pub fn lcm(first: usize, second: usize) -> usize {
     first * second / gcd(first, second)
 }

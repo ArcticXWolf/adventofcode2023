@@ -53,6 +53,18 @@ pub fn read_file(folder: &str, day: u8) -> String {
     f.expect("could not open input file")
 }
 
+pub fn read_file_alternate(folder: &str, day: u8, version: u8) -> String {
+    let cwd = env::current_dir().unwrap();
+
+    let filepath = cwd
+        .join("src")
+        .join(folder)
+        .join(format!("{day:02}_{version:02}.txt"));
+
+    let f = fs::read_to_string(filepath);
+    f.expect("could not open input file")
+}
+
 fn parse_time(val: &str, postfix: &str) -> f64 {
     val.split(postfix).next().unwrap().parse().unwrap()
 }
