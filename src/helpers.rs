@@ -69,6 +69,13 @@ pub fn egcd_mn(numbers: &Vec<i64>) -> Option<(i64, Vec<i64>)> {
 
 // Chinese Remainder Theorem
 // https://en.wikipedia.org/wiki/Chinese_remainder_theorem#Existence_.28direct_construction.29
+// Usage:
+// For the following system:
+//   x = 0 mod 3
+//   x = 3 mod 4
+//   x = 4 mod 5
+//
+//   x = crt([(3,0), (4,3), (5,4)]) = 39
 pub fn crt(numbers_with_remainders: Vec<(i64, i64)>) -> i64 {
     let full_product: i64 = numbers_with_remainders.iter().map(|n| n.0).product();
     let mut result = 0;
