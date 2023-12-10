@@ -46,7 +46,7 @@ impl<T: Scalar> Point<T, 2> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Point2Direction {
     North,
     NorthEast,
