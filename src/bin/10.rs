@@ -1,8 +1,15 @@
-use std::{collections::HashSet, fmt::Display};
-
 use advent_of_code::algebra_helpers::{Point2, Point2Direction, PointGrid};
-use itertools::Itertools;
 
+// For part2 my initial solution was to run along the loop and then mark all
+// nodes on the left (in the direction of running) as inside. If we would go out
+// of bounds during this, we know that we had to mark all nodes on the right
+// instead of left. (This is the same algorithm as the maze solving algorithm)
+// You can see that solution in my previous commit.
+//
+// Now, I am using a simple scanline algoritm and flip inside/outside if I
+// encounter a pipe on the loop.
+
+#[derive(Debug, Clone, Copy)]
 enum PipeShape {
     NorthSouth,
     EastWest,
@@ -60,23 +67,6 @@ impl TryFrom<char> for PipeShape {
             'F' => Ok(Self::EastSouth),
             _ => Err(format!("Unknown pipeshape {}", value)),
         }
-    }
-}
-
-impl Display for PipeShape {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::NorthSouth => "|",
-                Self::EastWest => "-",
-                Self::NorthEast => "L",
-                Self::NorthWest => "J",
-                Self::SouthWest => "7",
-                Self::EastSouth => "F",
-            }
-        )
     }
 }
 
@@ -167,105 +157,55 @@ fn trace_loop(
     node_path
 }
 
-fn fill_loop(
+fn find_loop_fill(
     grid: &PointGrid<isize, 2, PipeShape>,
     loop_path: &[Point2<isize>],
-) -> Option<Vec<Point2<isize>>> {
-    // try lefthanded, then righthanded
-    let left_handed_try = fill_loop_onehanded(grid, loop_path, true);
-    if left_handed_try.is_some() {
-        return left_handed_try;
-    }
-    fill_loop_onehanded(grid, loop_path, false)
-}
+) -> Vec<Point2<isize>> {
+    let mut inside_nodes = vec![];
+    let dim = grid.dimensions();
+    for y in dim.0 .0[1]..(dim.1 .0[1] + 1) {
+        let mut inside = false;
+        let mut last_corner = None;
 
-fn fill_loop_onehanded(
-    grid: &PointGrid<isize, 2, PipeShape>,
-    loop_path: &[Point2<isize>],
-    lefthanded: bool,
-) -> Option<Vec<Point2<isize>>> {
-    let mut inside_nodes = HashSet::new();
+        for x in dim.0 .0[0]..(dim.1 .0[0] + 1) {
+            if loop_path.contains(&Point2::new(x, y)) {
+                let pipe_shape = grid.get(&Point2::new(x, y));
+                match (pipe_shape, last_corner) {
+                    (None, _) => {}
+                    (Some(PipeShape::NorthSouth), _)
+                    | (Some(PipeShape::SouthWest), Some(PipeShape::NorthEast))
+                    | (Some(PipeShape::NorthWest), Some(PipeShape::EastSouth)) => {
+                        inside = !inside;
+                        last_corner = None;
+                        continue;
+                    }
+                    (Some(PipeShape::EastWest), _)
+                    | (Some(PipeShape::NorthWest), Some(PipeShape::NorthEast))
+                    | (Some(PipeShape::SouthWest), Some(PipeShape::EastSouth)) => continue,
+                    (Some(PipeShape::NorthEast), _) | (Some(PipeShape::EastSouth), _) => {
+                        last_corner = pipe_shape.copied();
+                        continue;
+                    }
+                    _ => {
+                        println!(
+                            "P{:?} I{:?} PS{:?} LC{:?}",
+                            Point2::new(x, y),
+                            inside,
+                            pipe_shape,
+                            last_corner
+                        );
+                        unreachable!()
+                    }
+                }
+            }
 
-    let starting_loop_node = *loop_path.first().unwrap();
-    let mut current_loop_node = starting_loop_node;
-    let mut current_direction = *Point2Direction::all()
-        .filter(|d| {
-            starting_loop_node.get_point_in_direction(d, 1) == *loop_path.iter().nth(1).unwrap()
-        })
-        .next()
-        .unwrap();
-
-    // loop over the whole nodeloop
-    while current_loop_node.get_point_in_direction(&current_direction, 1) != starting_loop_node {
-        // add nodes to inside_nodes in a direction perpendicular to our moving direction
-        let fill_direction = if lefthanded {
-            current_direction.direction_left()
-        } else {
-            current_direction.direction_right()
-        };
-        if !fill_towards_direction(
-            &grid,
-            loop_path,
-            current_loop_node,
-            &fill_direction,
-            &mut inside_nodes,
-        ) {
-            // we are filling the outside, abort..
-            return None;
-        }
-
-        // follow the loop
-        current_loop_node = current_loop_node.get_point_in_direction(&current_direction, 1);
-
-        // add nodes to inside_nodes in a direction perpendicular to our moving direction
-        let fill_direction = if lefthanded {
-            current_direction.direction_left()
-        } else {
-            current_direction.direction_right()
-        };
-        if !fill_towards_direction(
-            &grid,
-            loop_path,
-            current_loop_node,
-            &fill_direction,
-            &mut inside_nodes,
-        ) {
-            // we are filling the outside, abort..
-            return None;
-        }
-
-        let pipe_shape = grid.get(&current_loop_node).unwrap();
-        current_direction = pipe_shape
-            .get_other_exit_direction(&current_direction.direction_left().direction_left())
-            .unwrap();
-    }
-
-    Some(inside_nodes.into_iter().collect_vec())
-}
-
-fn fill_towards_direction(
-    grid: &PointGrid<isize, 2, PipeShape>,
-    loop_path: &[Point2<isize>],
-    starting_pos: Point2<isize>,
-    direction: &Point2Direction,
-    inside_nodes: &mut HashSet<Point2<isize>>,
-) -> bool {
-    let mut current_node = starting_pos;
-    while !loop_path.contains(&current_node.get_point_in_direction(direction, 1)) {
-        inside_nodes.insert(current_node.get_point_in_direction(direction, 1));
-        current_node = current_node.get_point_in_direction(direction, 1);
-
-        // if out of bounds, then we are filling the outside, abort..
-        let dim = grid.dimensions();
-        if current_node.0[0] < dim.0 .0[0]
-            || current_node.0[1] < dim.0 .0[1]
-            || dim.1 .0[0] < current_node.0[0]
-            || dim.1 .0[1] < current_node.0[1]
-        {
-            return false;
+            if inside {
+                inside_nodes.push(Point2::new(x, y));
+            }
         }
     }
-    true
+
+    inside_nodes
 }
 
 pub fn part_one(_input: &str) -> Option<u32> {
@@ -277,13 +217,9 @@ pub fn part_one(_input: &str) -> Option<u32> {
 pub fn part_two(_input: &str) -> Option<u32> {
     let (grid, starting_pos) = parse_input(_input);
     let loop_path = trace_loop(&grid, starting_pos);
-    let inside_nodes = fill_loop(&grid, &loop_path);
+    let inside_nodes = find_loop_fill(&grid, &loop_path);
 
-    if let Some(nodes) = inside_nodes {
-        Some(nodes.len() as u32)
-    } else {
-        None
-    }
+    Some(inside_nodes.len() as u32)
 }
 
 fn main() {
