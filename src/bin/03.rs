@@ -6,9 +6,10 @@ struct NumberOnMap {
     value: u32,
     start_position: Point2<isize>,
     end_position: Point2<isize>,
+    symbol: Option<Symbol>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Symbol {
     value: char,
     position: Point2<isize>,
@@ -65,6 +66,7 @@ fn parse_map(s: &str) -> (Vec<NumberOnMap>, Vec<Symbol>) {
                         value: constructed_number.parse::<u32>().unwrap(),
                         start_position: Point2::new(x as isize, y as isize),
                         end_position: Point2::new((position - 1) as isize, y as isize),
+                        symbol: None,
                     });
                     skip_numbers = true;
                 }
@@ -78,15 +80,20 @@ fn parse_map(s: &str) -> (Vec<NumberOnMap>, Vec<Symbol>) {
         }
     }
 
+    for n in numbers.iter_mut() {
+        let symbol = n.is_part_number(&symbols);
+        n.symbol = symbol;
+    }
+
     (numbers, symbols)
 }
 
 pub fn part_one(_input: &str) -> Option<u32> {
-    let (numbers, symbols) = parse_map(_input);
+    let (numbers, _) = parse_map(_input);
     Some(
         numbers
             .iter()
-            .filter(|n| n.is_part_number(&symbols).is_some())
+            .filter(|n| n.symbol.is_some())
             .map(|n| n.value)
             .sum(),
     )
@@ -103,14 +110,7 @@ pub fn part_two(_input: &str) -> Option<u32> {
 
         let gear_numbers = numbers
             .iter()
-            .filter(|n| {
-                if let Some(new_s) = n.is_part_number(&symbols) {
-                    if new_s.position == s.position {
-                        return true;
-                    }
-                }
-                false
-            })
+            .filter(|n| n.symbol == Some(*s))
             .map(|n| n.value)
             .collect_vec();
 
