@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 #[derive(Debug, PartialEq, Eq)]
 struct ConditionRecord {
     springs: u128,
     questionmarks: u128,
     groupings: Vec<usize>,
+    cache: HashMap<(u128, u128, Vec<usize>), usize>,
 }
 
 impl ConditionRecord {
@@ -36,18 +39,6 @@ impl ConditionRecord {
             .split(",")
             .map(|s| s.parse().unwrap())
             .collect::<Vec<usize>>();
-        let groups = spring_str
-            .replace(".", " ")
-            .split_whitespace()
-            .map(|s| s.len())
-            .collect::<Vec<usize>>();
-        println!(
-            "G C{:?} P{:?} - {:?} {:?}",
-            groups.len(),
-            groupings.len(),
-            groups,
-            groupings
-        );
 
         groupings = groupings.repeat(expansion_faktor);
 
@@ -55,49 +46,116 @@ impl ConditionRecord {
             springs,
             questionmarks,
             groupings,
+            cache: HashMap::new(),
         }
     }
 
-    fn count_ways_to_solve_record(&self) -> usize {
-        let mut mapping = !self.questionmarks;
-        let mut counter = 0;
-        for _ in 0..(1 << self.questionmarks.count_ones()) {
-            if self.is_questionmark_mapping_correct(mapping) {
-                counter += 1;
-            }
-            mapping = ((mapping.wrapping_add(1)) & self.questionmarks) | (!self.questionmarks);
-        }
-        counter
-    }
-
-    fn is_questionmark_mapping_correct(&self, bitstring: u128) -> bool {
-        compare_spring_group_counts(
-            (self.springs & (!self.questionmarks)) | (bitstring & self.questionmarks),
-            &self.groupings,
+    fn count_ways_to_solve_record_recursively(&mut self) -> usize {
+        self._count_ways_to_solve_record_recursively(
+            self.springs,
+            self.questionmarks,
+            &self.groupings.clone(),
         )
     }
-}
 
-fn compare_spring_group_counts(springs: u128, group_counts: &[usize]) -> bool {
-    let mut bitstring = springs.clone();
-    let mut groups_detected = vec![];
-    let mut counter = 0;
-
-    while bitstring > 0 {
-        if bitstring & 0b1 == 0 && counter > 0 {
-            groups_detected.push(counter);
-            counter = 0;
-        } else if bitstring & 0b1 > 0 {
-            counter += 1;
+    fn _count_ways_to_solve_record_recursively(
+        &mut self,
+        springs: u128,
+        questionmarks: u128,
+        groupings: &[usize],
+    ) -> usize {
+        // print!(
+        //     "Testing {:020b} {:020b} {:?}: ",
+        //     springs, questionmarks, groupings
+        // );
+        if groupings.is_empty() {
+            if springs == 0 {
+                // println!("Groupings empty, strings empty - 1");
+                return 1;
+            }
+            // println!("Groupings empty, strings filled - 0");
+            return 0;
+        } else {
+            if springs | questionmarks == 0 {
+                // println!("Groupings filled, strings empty - 0");
+                return 0;
+            }
         }
 
-        bitstring = bitstring >> 1;
-    }
-    if counter > 0 {
-        groups_detected.push(counter);
-    }
+        if self
+            .cache
+            .contains_key(&(springs, questionmarks, groupings.to_vec()))
+        {
+            return *self
+                .cache
+                .get(&(springs, questionmarks, groupings.to_vec()))
+                .unwrap();
+        }
 
-    groups_detected == group_counts
+        if (springs | questionmarks) & 0b1 == 0 {
+            // println!("Blank in front");
+            let result = self._count_ways_to_solve_record_recursively(
+                springs >> 1,
+                questionmarks >> 1,
+                groupings,
+            );
+            self.cache
+                .insert((springs, questionmarks, groupings.to_vec()), result);
+            return result;
+        }
+
+        if springs & 0b1 == 1 {
+            let group = groupings.first().unwrap();
+            let is_group_matched =
+                (springs | questionmarks) & ((1 << group) - 1) == ((1 << group) - 1);
+            let has_group_a_seperator_in_front =
+                (springs & (1 << group) == 0) || (questionmarks & (1 << group) > 0);
+            if is_group_matched && has_group_a_seperator_in_front {
+                // println!("Group in front");
+                let result = self._count_ways_to_solve_record_recursively(
+                    springs >> (group + 1),
+                    questionmarks >> (group + 1),
+                    &groupings[1..],
+                );
+                self.cache
+                    .insert((springs, questionmarks, groupings.to_vec()), result);
+                return result;
+            }
+            // println!(
+            //     "Group in front not matched {} {} {} {:0b} {:0b} {:0b} {} {}",
+            //     group,
+            //     is_group_matched,
+            //     has_group_a_seperator_in_front,
+            //     (springs | questionmarks) & ((1 << group) - 1),
+            //     (springs | questionmarks),
+            //     ((1 << group) - 1),
+            //     (springs & (1 << group) == 0),
+            //     (questionmarks & (1 << group) > 0)
+            // );
+            self.cache
+                .insert((springs, questionmarks, groupings.to_vec()), 0);
+            return 0;
+        }
+
+        if questionmarks & 0b1 == 1 {
+            // println!("Questionmark in front, splitting...");
+            let result = self._count_ways_to_solve_record_recursively(
+                springs | 0b1,
+                questionmarks & (u128::MAX - 1),
+                groupings,
+            ) + self._count_ways_to_solve_record_recursively(
+                springs & (u128::MAX - 1),
+                questionmarks & (u128::MAX - 1),
+                groupings,
+            );
+            self.cache
+                .insert((springs, questionmarks, groupings.to_vec()), result);
+            return result;
+        }
+
+        assert!(false);
+        0
+    }
 }
 
 pub fn part_one(_input: &str) -> Option<usize> {
@@ -105,7 +163,13 @@ pub fn part_one(_input: &str) -> Option<usize> {
         .lines()
         .map(|l| ConditionRecord::from(l, 1))
         .collect();
-    Some(records.iter().map(|r| r.count_ways_to_solve_record()).sum())
+
+    let mut sum = 0;
+    for mut r in records.into_iter() {
+        sum += r.count_ways_to_solve_record_recursively();
+    }
+
+    Some(sum)
 }
 
 pub fn part_two(_input: &str) -> Option<usize> {
@@ -113,7 +177,12 @@ pub fn part_two(_input: &str) -> Option<usize> {
         .lines()
         .map(|l| ConditionRecord::from(l, 5))
         .collect();
-    Some(records.iter().map(|r| r.count_ways_to_solve_record()).sum())
+    let mut sum = 0;
+    for mut r in records.into_iter() {
+        sum += r.count_ways_to_solve_record_recursively();
+    }
+
+    Some(sum)
 }
 
 fn main() {
@@ -127,89 +196,44 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_comparision() {
-        assert_eq!(
-            compare_spring_group_counts(0b011101000010, &[1, 1, 3]),
-            true
-        );
-        assert_eq!(compare_spring_group_counts(0b01100111, &[1, 1, 3]), false);
-    }
-
-    #[test]
-    fn test_records() {
-        assert_eq!(
-            ConditionRecord::from(".??..??...?##. 1,1,3", 1),
-            ConditionRecord {
-                springs: 0b1100000000000,
-                questionmarks: 0b10001100110,
-                groupings: vec![1, 1, 3]
-            }
-        );
-        assert_eq!(
-            ConditionRecord::from(".# 1", 1),
-            ConditionRecord {
-                springs: 0b10,
-                questionmarks: 0b0,
-                groupings: vec![1]
-            }
-        );
-        assert_eq!(
-            ConditionRecord::from(".# 1", 5),
-            ConditionRecord {
-                springs: 0b10010010010010,
-                questionmarks: 0b100100100100,
-                groupings: vec![1, 1, 1, 1, 1]
-            }
-        );
-        assert_eq!(
-            ConditionRecord::from("???.### 1,1,3", 1),
-            ConditionRecord {
-                springs: 0b1110000,
-                questionmarks: 0b0000111,
-                groupings: vec![1, 1, 3]
-            }
-        );
-        assert_eq!(
-            ConditionRecord::from("???.### 1,1,3", 5),
-            ConditionRecord {
-                springs: 0b111000001110000011100000111000001110000,
-                questionmarks: 0b000011110000111100001111000011110000111,
-                groupings: vec![1, 1, 3, 1, 1, 3, 1, 1, 3, 1, 1, 3, 1, 1, 3]
-            }
-        );
-    }
-
-    #[test]
-    fn test_records_comparision() {
-        assert_eq!(
-            ConditionRecord::from("..##.?.##?...# 2,1,3,1", 1)
-                .is_questionmark_mapping_correct(0b1000100000),
-            true
-        );
-        assert_eq!(
-            ConditionRecord::from("..##.?.##?...# 2,1,3,1", 1)
-                .is_questionmark_mapping_correct(0b10),
-            false
-        );
-    }
-
-    #[test]
     fn test_records_counting() {
         assert_eq!(
-            ConditionRecord::from("..##.?.##?...# 2,1,3,1", 1).count_ways_to_solve_record(),
+            ConditionRecord::from("..##.?.##?...# 2,1,3,1", 1)
+                .count_ways_to_solve_record_recursively(),
             1
         );
         assert_eq!(
-            ConditionRecord::from(".??..??...?##. 1,1,3", 1).count_ways_to_solve_record(),
+            ConditionRecord::from(".??..??...?##. 1,1,3", 1)
+                .count_ways_to_solve_record_recursively(),
             4
         );
         assert_eq!(
-            ConditionRecord::from("???.### 1,1,3", 5).count_ways_to_solve_record(),
+            ConditionRecord::from("???.### 1,1,3", 5).count_ways_to_solve_record_recursively(),
             1
         );
         assert_eq!(
-            ConditionRecord::from(".??..??...?##. 1,1,3", 5).count_ways_to_solve_record(),
+            ConditionRecord::from(".??..??...?##. 1,1,3", 5)
+                .count_ways_to_solve_record_recursively(),
             16384
+        );
+        assert_eq!(
+            ConditionRecord::from("?#?#?#?#?#?#?#? 1,3,1,6", 5)
+                .count_ways_to_solve_record_recursively(),
+            1
+        );
+        assert_eq!(
+            ConditionRecord::from("????.#...#... 4,1,1", 5)
+                .count_ways_to_solve_record_recursively(),
+            16
+        );
+        assert_eq!(
+            ConditionRecord::from("????.######..#####. 1,6,5", 5)
+                .count_ways_to_solve_record_recursively(),
+            2500
+        );
+        assert_eq!(
+            ConditionRecord::from("?###???????? 3,2,1", 5).count_ways_to_solve_record_recursively(),
+            506250
         );
     }
 
@@ -222,6 +246,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let input = advent_of_code::read_file("examples", 12);
-        assert_eq!(part_two(&input), Some(506250));
+        assert_eq!(part_two(&input), Some(525152));
     }
 }
