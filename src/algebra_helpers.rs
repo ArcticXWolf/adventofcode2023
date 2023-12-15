@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use num_traits::Num;
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::ops::{self, Index, IndexMut};
 use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 use std::slice::Iter;
@@ -9,12 +10,32 @@ use std::{array, fmt};
 // Taken and adapted from MIT-licensed code library lina: https://github.com/LukasKalbertodt/lina
 
 pub trait Scalar:
-    Num + Clone + Copy + fmt::Debug + AddAssign + SubAssign + MulAssign + DivAssign
+    Num
+    + Clone
+    + Copy
+    + fmt::Debug
+    + AddAssign
+    + SubAssign
+    + MulAssign
+    + DivAssign
+    + PartialEq
+    + Eq
+    + Hash
 {
 }
 
 impl<T> Scalar for T where
-    T: Num + Clone + Copy + fmt::Debug + AddAssign + SubAssign + MulAssign + DivAssign
+    T: Num
+        + Clone
+        + Copy
+        + fmt::Debug
+        + AddAssign
+        + SubAssign
+        + MulAssign
+        + DivAssign
+        + PartialEq
+        + Eq
+        + Hash
 {
 }
 
@@ -325,7 +346,7 @@ impl<T: Scalar, const N: usize> Clone for Point<T, N> {
 
 impl<T: Scalar, const N: usize> Copy for Point<T, N> {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PointGrid<T: Scalar, const N: usize, U>(pub HashMap<Point<T, N>, U>);
 
 impl<T: Scalar, const N: usize, U> Default for PointGrid<T, N, U> {
