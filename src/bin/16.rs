@@ -74,27 +74,33 @@ impl Cave {
         self.travelled_path = HashSet::default();
     }
 
-    fn trace(&mut self, position: &Point2<isize>, direction: &Point2Direction) {
+    fn trace(&mut self, starting_position: &Point2<isize>, starting_direction: &Point2Direction) {
         let (min, max) = self.grid.dimensions();
-        if position.0[0] < min.0[0]
-            || position.0[1] < min.0[1]
-            || position.0[0] > max.0[0]
-            || position.0[1] > max.0[1]
-        {
-            return;
-        }
-        self.energized_cells.insert(*position);
 
-        let mut new_directions = vec![*direction];
-        if let Some(cell) = self.grid.get(&position) {
-            new_directions = cell.adjust_direction(direction);
-        }
+        let mut open_nodes: Vec<(Point2<isize>, Point2Direction)> =
+            vec![(*starting_position, *starting_direction)];
+        while let Some((current_pos, current_direction)) = open_nodes.pop() {
+            self.energized_cells.insert(current_pos);
+            self.travelled_path.insert((current_pos, current_direction));
 
-        for d in &new_directions {
-            let new_pos = position.get_point_in_direction(d, 1);
-            if !self.travelled_path.contains(&(new_pos, *d)) {
-                self.travelled_path.insert((new_pos, *d));
-                self.trace(&new_pos, d);
+            let mut new_directions = vec![current_direction];
+            if let Some(cell) = self.grid.get(&current_pos) {
+                new_directions = cell.adjust_direction(&current_direction);
+            }
+
+            for d in &new_directions {
+                let new_pos = current_pos.get_point_in_direction(d, 1);
+                if new_pos.0[0] < min.0[0]
+                    || new_pos.0[1] < min.0[1]
+                    || new_pos.0[0] > max.0[0]
+                    || new_pos.0[1] > max.0[1]
+                {
+                    continue;
+                }
+
+                if !self.travelled_path.contains(&(new_pos, *d)) {
+                    open_nodes.push((new_pos, *d));
+                }
             }
         }
     }
