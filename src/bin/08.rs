@@ -43,7 +43,7 @@ impl From<Vec<(&str, (&str, &str))>> for NodeMap {
             hm.insert(k.to_string(), (vl.to_string(), vr.to_string()));
         }
 
-        Self { 0: hm }
+        Self(hm)
     }
 }
 
@@ -72,6 +72,7 @@ impl NodeMap {
     }
 }
 
+#[allow(clippy::type_complexity)]
 mod parser {
     use nom::{
         branch::alt,
@@ -141,7 +142,7 @@ pub fn part_two(_input: &str) -> Option<usize> {
         .0
         .keys()
         .map(|s| s.as_str())
-        .filter(|s| s.ends_with("A"))
+        .filter(|s| s.ends_with('A'))
         .sorted()
         .collect_vec();
 

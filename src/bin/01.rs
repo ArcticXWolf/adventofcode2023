@@ -9,7 +9,7 @@ pub fn part_one(_input: &str) -> Option<u32> {
                 .filter(|c| c.is_numeric())
                 .map(|c| c.to_digit(10).unwrap())
                 .collect_vec();
-            Some(number_chars.iter().nth(0)? * 10 + number_chars.iter().nth_back(0)?)
+            Some(number_chars.first()? * 10 + number_chars.iter().nth_back(0)?)
         })
         .collect_vec();
 
@@ -23,17 +23,17 @@ fn pull_numbers(s: &str) -> Vec<u32> {
                 return c.to_string().parse::<u32>().ok();
             }
             match s.split_at(i).1 {
-                subs if subs.starts_with("zero") => return Some(0),
-                subs if subs.starts_with("one") => return Some(1),
-                subs if subs.starts_with("two") => return Some(2),
-                subs if subs.starts_with("three") => return Some(3),
-                subs if subs.starts_with("four") => return Some(4),
-                subs if subs.starts_with("five") => return Some(5),
-                subs if subs.starts_with("six") => return Some(6),
-                subs if subs.starts_with("seven") => return Some(7),
-                subs if subs.starts_with("eight") => return Some(8),
-                subs if subs.starts_with("nine") => return Some(9),
-                _ => return None,
+                subs if subs.starts_with("zero") => Some(0),
+                subs if subs.starts_with("one") => Some(1),
+                subs if subs.starts_with("two") => Some(2),
+                subs if subs.starts_with("three") => Some(3),
+                subs if subs.starts_with("four") => Some(4),
+                subs if subs.starts_with("five") => Some(5),
+                subs if subs.starts_with("six") => Some(6),
+                subs if subs.starts_with("seven") => Some(7),
+                subs if subs.starts_with("eight") => Some(8),
+                subs if subs.starts_with("nine") => Some(9),
+                _ => None,
             }
         })
         .collect_vec()
@@ -45,7 +45,7 @@ pub fn part_two(_input: &str) -> Option<u32> {
             .lines()
             .filter_map(|l| {
                 let nv = pull_numbers(l);
-                Some(nv.iter().nth(0)? * 10 + nv.iter().nth_back(0)?)
+                Some(nv.first()? * 10 + nv.last()?)
             })
             .sum(),
     )

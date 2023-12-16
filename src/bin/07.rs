@@ -71,19 +71,19 @@ enum HandType {
 impl HandType {
     fn new_from_cards_part1(counts: &HashMap<Card, usize>) -> Self {
         if counts.values().any(|c| *c == 5) {
-            return Self::FiveOfAKind;
+            Self::FiveOfAKind
         } else if counts.values().any(|c| *c == 4) {
-            return Self::FourOfAKind;
+            Self::FourOfAKind
         } else if counts.values().all(|c| *c == 3 || *c == 2) {
-            return Self::FullHouse;
+            Self::FullHouse
         } else if counts.values().any(|c| *c == 3) {
-            return Self::ThreeOfAKind;
+            Self::ThreeOfAKind
         } else if counts.values().filter(|c| **c == 2).count() == 2 {
-            return Self::TwoPair;
+            Self::TwoPair
         } else if counts.values().any(|c| *c == 2) {
-            return Self::Pair;
+            Self::Pair
         } else {
-            return Self::HighCard;
+            Self::HighCard
         }
     }
 
@@ -99,19 +99,19 @@ impl HandType {
             .collect_vec();
 
         if counts_without_wildcards.iter().any(|c| *c + wildcards == 5) || wildcards == 5 {
-            return Self::FiveOfAKind;
+            Self::FiveOfAKind
         } else if counts_without_wildcards.iter().any(|c| c + wildcards == 4) {
-            return Self::FourOfAKind;
+            Self::FourOfAKind
         } else if Self::is_full_house(&counts_without_wildcards, wildcards) {
-            return Self::FullHouse;
+            Self::FullHouse
         } else if counts_without_wildcards.iter().any(|c| *c + wildcards == 3) {
-            return Self::ThreeOfAKind;
+            Self::ThreeOfAKind
         } else if counts_without_wildcards.iter().filter(|c| **c == 2).count() == 2 {
-            return Self::TwoPair;
+            Self::TwoPair
         } else if counts_without_wildcards.iter().any(|c| *c + wildcards == 2) {
-            return Self::Pair;
+            Self::Pair
         } else {
-            return Self::HighCard;
+            Self::HighCard
         }
     }
 
@@ -166,7 +166,7 @@ impl Hand {
 pub fn part_one(_input: &str) -> Option<u32> {
     let mut hand_bid_pairs: Vec<(Hand, u32)> = _input
         .lines()
-        .filter_map(|l| l.split_once(" "))
+        .filter_map(|l| l.split_once(' '))
         .map(|(hand_s, bid_s)| {
             (
                 Hand::new(hand_s, true).unwrap(),
@@ -189,7 +189,7 @@ pub fn part_one(_input: &str) -> Option<u32> {
 pub fn part_two(_input: &str) -> Option<u32> {
     let mut hand_bid_pairs: Vec<(Hand, u32)> = _input
         .lines()
-        .filter_map(|l| l.split_once(" "))
+        .filter_map(|l| l.split_once(' '))
         .map(|(hand_s, bid_s)| {
             (
                 Hand::new(hand_s, false).unwrap(),

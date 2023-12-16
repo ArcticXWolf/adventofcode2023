@@ -18,20 +18,12 @@ impl Display for Cell {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 struct Platform(PointGrid<isize, 2, Cell>);
 
 impl Display for Platform {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.0)
-    }
-}
-
-impl Default for Platform {
-    fn default() -> Self {
-        Self {
-            0: Default::default(),
-        }
     }
 }
 
@@ -136,11 +128,8 @@ impl Platform {
         let mut load = 0;
         let (_, dim_max) = self.0.dimensions();
         for p in self.0.iter_full_bounds() {
-            if let Some(c) = self.0.get(&p) {
-                match c {
-                    Cell::Round => load += dim_max.0[1] - p.0[1] + 1,
-                    _ => {}
-                }
+            if let Some(Cell::Round) = self.0.get(&p) {
+                load += dim_max.0[1] - p.0[1] + 1;
             }
         }
         load

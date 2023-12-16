@@ -115,8 +115,8 @@ fn identify_tile_by_surroundings(
         }
         if found_directions.len() == 2 {
             return PipeShape::from_directions(
-                found_directions.iter().nth(0).unwrap(),
-                found_directions.iter().nth(1).unwrap(),
+                found_directions.get(0).unwrap(),
+                found_directions.get(1).unwrap(),
             );
         }
     }
@@ -129,13 +129,12 @@ fn trace_loop(
 ) -> Vec<Point2<isize>> {
     let mut node_path = vec![];
     let mut current_node = starting_pos;
-    let mut next_direction = grid
+    let mut next_direction = *grid
         .get(&starting_pos)
         .unwrap()
         .get_exit_directions()
         .first()
-        .unwrap()
-        .clone();
+        .unwrap();
 
     while current_node.get_point_in_direction(&next_direction, 1) != starting_pos {
         node_path.push(current_node);

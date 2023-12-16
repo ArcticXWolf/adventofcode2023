@@ -11,7 +11,7 @@ struct ConditionRecord {
 impl ConditionRecord {
     fn from(s: &str, expansion_faktor: usize) -> Self {
         let (spring_str, groupings_str) =
-            s.split_once(" ").ok_or("could not split string").unwrap();
+            s.split_once(' ').ok_or("could not split string").unwrap();
 
         let mut springs_pre = 0;
         let mut questionmarks_pre = 0;
@@ -36,7 +36,7 @@ impl ConditionRecord {
         }
 
         let mut groupings = groupings_str
-            .split(",")
+            .split(',')
             .map(|s| s.parse().unwrap())
             .collect::<Vec<usize>>();
 
@@ -64,22 +64,13 @@ impl ConditionRecord {
         questionmarks: u128,
         groupings: &[usize],
     ) -> usize {
-        // print!(
-        //     "Testing {:020b} {:020b} {:?}: ",
-        //     springs, questionmarks, groupings
-        // );
         if groupings.is_empty() {
             if springs == 0 {
-                // println!("Groupings empty, strings empty - 1");
                 return 1;
             }
-            // println!("Groupings empty, strings filled - 0");
             return 0;
-        } else {
-            if springs | questionmarks == 0 {
-                // println!("Groupings filled, strings empty - 0");
-                return 0;
-            }
+        } else if springs | questionmarks == 0 {
+            return 0;
         }
 
         if self
@@ -93,7 +84,6 @@ impl ConditionRecord {
         }
 
         if (springs | questionmarks) & 0b1 == 0 {
-            // println!("Blank in front");
             let result = self._count_ways_to_solve_record_recursively(
                 springs >> 1,
                 questionmarks >> 1,
@@ -111,7 +101,6 @@ impl ConditionRecord {
             let has_group_a_seperator_in_front =
                 (springs & (1 << group) == 0) || (questionmarks & (1 << group) > 0);
             if is_group_matched && has_group_a_seperator_in_front {
-                // println!("Group in front");
                 let result = self._count_ways_to_solve_record_recursively(
                     springs >> (group + 1),
                     questionmarks >> (group + 1),
@@ -121,24 +110,12 @@ impl ConditionRecord {
                     .insert((springs, questionmarks, groupings.to_vec()), result);
                 return result;
             }
-            // println!(
-            //     "Group in front not matched {} {} {} {:0b} {:0b} {:0b} {} {}",
-            //     group,
-            //     is_group_matched,
-            //     has_group_a_seperator_in_front,
-            //     (springs | questionmarks) & ((1 << group) - 1),
-            //     (springs | questionmarks),
-            //     ((1 << group) - 1),
-            //     (springs & (1 << group) == 0),
-            //     (questionmarks & (1 << group) > 0)
-            // );
             self.cache
                 .insert((springs, questionmarks, groupings.to_vec()), 0);
             return 0;
         }
 
         if questionmarks & 0b1 == 1 {
-            // println!("Questionmark in front, splitting...");
             let result = self._count_ways_to_solve_record_recursively(
                 springs | 0b1,
                 questionmarks & (u128::MAX - 1),
@@ -153,8 +130,7 @@ impl ConditionRecord {
             return result;
         }
 
-        assert!(false);
-        0
+        unreachable!()
     }
 }
 

@@ -20,9 +20,7 @@ impl NumberOnMap {
         for s in symbols {
             if s.position.0[1] < self.start_position.0[1] - 1
                 || s.position.0[1] > self.start_position.0[1] + 1
-            {
-                continue;
-            } else if s.position.0[0] < self.start_position.0[0] - 1
+                || s.position.0[0] < self.start_position.0[0] - 1
                 || s.position.0[0] > self.end_position[0] + 1
             {
                 continue;

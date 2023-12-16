@@ -41,7 +41,7 @@ impl Display for Pattern {
         for r in &self.rows {
             writeln!(f, "{:020b}", r)?;
         }
-        writeln!(f, "")
+        writeln!(f)
     }
 }
 
@@ -93,7 +93,7 @@ impl Pattern {
                 }
             }
         }
-        return 0;
+        0
     }
 
     fn find_reflection_rank(&self) -> usize {
@@ -107,7 +107,7 @@ impl Pattern {
                 return split_idx;
             }
         }
-        return 0;
+        0
     }
 
     fn is_reflection(
@@ -141,26 +141,18 @@ impl Pattern {
             }
             compare_offset += 1;
         }
-        return true;
+        true
     }
 }
 
 pub fn part_one(_input: &str) -> Option<usize> {
-    let patterns = _input
-        .trim()
-        .split("\n\n")
-        .map(|s| Pattern::from(s))
-        .collect_vec();
+    let patterns = _input.trim().split("\n\n").map(Pattern::from).collect_vec();
 
     Some(patterns.iter().map(|p| p.find_reflection_rank()).sum())
 }
 
 pub fn part_two(_input: &str) -> Option<usize> {
-    let patterns = _input
-        .trim()
-        .split("\n\n")
-        .map(|s| Pattern::from(s))
-        .collect_vec();
+    let patterns = _input.trim().split("\n\n").map(Pattern::from).collect_vec();
 
     Some(patterns.iter().map(|p| p.fix_smidge_and_rank()).sum())
 }

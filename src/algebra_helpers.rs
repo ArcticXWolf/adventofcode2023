@@ -187,7 +187,7 @@ impl<T: Scalar, const N: usize> Point<T, N> {
         Self::unit_vectors()
             .into_iter()
             .map(|p| Point::zero() - p)
-            .chain(Self::unit_vectors().into_iter())
+            .chain(Self::unit_vectors())
             .collect()
     }
 
@@ -355,7 +355,7 @@ impl<T: Scalar + Eq, const N: usize> Eq for Point<T, N> {}
 
 impl<T: Scalar, const N: usize> Clone for Point<T, N> {
     fn clone(&self) -> Self {
-        Self(self.0)
+        *self
     }
 }
 
@@ -390,22 +390,20 @@ impl<T: Scalar + std::hash::Hash + Eq, const N: usize, U> PointGrid<T, N, U> {
 impl<T: Scalar + Ord, const N: usize, U> PointGrid<T, N, U> {
     pub fn dimensions(&self) -> (Point<T, N>, Point<T, N>) {
         (
-            Point {
-                0: (0..N)
+            Point(
+                (0..N)
                     .map(|n| self.0.keys().map(|p| *p.0.get(n).unwrap()).min().unwrap())
-                    .into_iter()
                     .collect_vec()
                     .try_into()
                     .unwrap(),
-            },
-            Point {
-                0: (0..N)
+            ),
+            Point(
+                (0..N)
                     .map(|n| self.0.keys().map(|p| *p.0.get(n).unwrap()).max().unwrap())
-                    .into_iter()
                     .collect_vec()
                     .try_into()
                     .unwrap(),
-            },
+            ),
         )
     }
 }

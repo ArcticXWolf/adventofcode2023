@@ -1,9 +1,5 @@
-pub fn lcm_mn(numbers: &Vec<usize>) -> usize {
-    numbers
-        .clone()
-        .into_iter()
-        .reduce(|acc, n| lcm(acc, n))
-        .unwrap()
+pub fn lcm_mn(numbers: &[usize]) -> usize {
+    numbers.to_owned().clone().into_iter().reduce(lcm).unwrap()
 }
 
 pub fn lcm(first: usize, second: usize) -> usize {

@@ -11,12 +11,12 @@ enum Instruction {
 
 impl From<&str> for Instruction {
     fn from(value: &str) -> Self {
-        if value.contains("-") {
-            let (label, _) = value.split_once("-").unwrap();
+        if value.contains('-') {
+            let (label, _) = value.split_once('-').unwrap();
             let hash_value = hash(label);
             return Self::Dash(hash_value, label.to_string());
-        } else if value.contains("=") {
-            let (label, focal_length) = value.split_once("=").unwrap();
+        } else if value.contains('=') {
+            let (label, focal_length) = value.split_once('=').unwrap();
             let hash_value = hash(label);
             return Self::Equals(hash_value, label.to_string(), focal_length.parse().unwrap());
         }
@@ -111,22 +111,22 @@ fn hash(s: &str) -> usize {
     for c in s.chars() {
         acc += c as usize;
         acc *= 17;
-        acc = acc % 256
+        acc %= 256
     }
 
     acc
 }
 
 pub fn part_one(_input: &str) -> Option<usize> {
-    let init_seq = _input.trim().split(",").collect_vec();
+    let init_seq = _input.trim().split(',').collect_vec();
     Some(init_seq.iter().map(|&s| hash(s)).sum())
 }
 
 pub fn part_two(_input: &str) -> Option<usize> {
     let init_seq = _input
         .trim()
-        .split(",")
-        .map(|l| Instruction::from(l))
+        .split(',')
+        .map(Instruction::from)
         .collect_vec();
     let mut room = Room::default();
 

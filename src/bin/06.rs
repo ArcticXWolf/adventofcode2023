@@ -31,14 +31,14 @@ pub fn parse_input2(s: &str) -> (u64, u64) {
         .split_once(':')
         .unwrap()
         .1
-        .replace(" ", "")
+        .replace(' ', "")
         .parse::<u64>()
         .unwrap();
     let distance = distance_str
         .split_once(':')
         .unwrap()
         .1
-        .replace(" ", "")
+        .replace(' ', "")
         .parse::<u64>()
         .unwrap();
 

@@ -19,7 +19,7 @@ impl Scratchcard {
         if wn == 0 {
             return 0;
         }
-        (2 as u32).pow(wn - 1)
+        (2_u32).pow(wn - 1)
     }
 }
 
@@ -33,6 +33,7 @@ impl From<(u32, (Vec<u32>, Vec<u32>))> for Scratchcard {
     }
 }
 
+#[allow(clippy::type_complexity)]
 mod parser {
     use nom::{
         bytes::complete::tag,
@@ -84,7 +85,7 @@ pub fn part_one(_input: &str) -> Option<u32> {
 pub fn part_two(_input: &str) -> Option<u32> {
     let cards = parser::parse_scratchcards(_input).unwrap();
 
-    let mut card_count = vec![1 as u32; cards.len()];
+    let mut card_count = vec![1_u32; cards.len()];
     for (idx, card) in cards.iter().enumerate() {
         let ws = card.find_winning_numbers_in_your_numbers().len();
         for i in (idx + 1)..(idx + 1 + ws) {

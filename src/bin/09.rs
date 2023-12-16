@@ -20,13 +20,7 @@ fn construct_rate_of_changes(numbers: &[i64]) -> Vec<Vec<i64>> {
     let mut rates_of_change = vec![numbers.to_vec()];
 
     // while last roc is all 0
-    while rates_of_change
-        .last()
-        .unwrap()
-        .into_iter()
-        .all_equal_value()
-        != Ok(&0)
-    {
+    while rates_of_change.last().unwrap().iter().all_equal_value() != Ok(&0) {
         // create pairwise difference
         let new_roc = rates_of_change
             .last()
@@ -42,10 +36,10 @@ fn construct_rate_of_changes(numbers: &[i64]) -> Vec<Vec<i64>> {
 }
 
 fn interpolate_number(numbers_with_roc: &[Vec<i64>]) -> i64 {
-    let mut previous_change = numbers_with_roc.last().unwrap().last().unwrap().clone();
+    let mut previous_change = *numbers_with_roc.last().unwrap().last().unwrap();
     for i in (0..(numbers_with_roc.len() - 1)).rev() {
-        let current_last_element = numbers_with_roc.get(i).unwrap().last().unwrap().clone();
-        previous_change = previous_change + current_last_element;
+        let current_last_element = *numbers_with_roc.get(i).unwrap().last().unwrap();
+        previous_change += current_last_element;
     }
 
     previous_change
