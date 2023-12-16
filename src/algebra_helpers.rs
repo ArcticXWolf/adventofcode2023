@@ -67,7 +67,7 @@ impl<T: Scalar> Point<T, 2> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Point2Direction {
     North,
     NorthEast,
@@ -123,6 +123,21 @@ impl Point2Direction {
             Self::South => Self::West,
             Self::West => Self::North,
             _ => unimplemented!(),
+        }
+    }
+}
+
+impl std::fmt::Display for Point2Direction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Point2Direction::North => write!(f, "↑"),
+            Point2Direction::East => write!(f, "→"),
+            Point2Direction::South => write!(f, "↓"),
+            Point2Direction::West => write!(f, "←"),
+            Point2Direction::NorthEast => write!(f, "↗"),
+            Point2Direction::SouthEast => write!(f, "↘"),
+            Point2Direction::SouthWest => write!(f, "↙"),
+            Point2Direction::NorthWest => write!(f, "↖"),
         }
     }
 }
