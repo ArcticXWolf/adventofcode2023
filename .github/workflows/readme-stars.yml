@@ -2,8 +2,8 @@ name: Update readme ⭐️ progress
 
 on:
     # !Please set a different minute than 51 if you enable this!
-    # schedule:
-    #     - cron: "51 */6 * * *" # Every 6 hours
+    schedule:
+        - cron: "13 */6 * * *" # Every 6 hours
     workflow_dispatch:
 
 jobs:
@@ -27,4 +27,4 @@ jobs:
               env:
                   AOC_ENABLED: ${{ secrets.AOC_ENABLED }}
               with:
-                  commit_message: "update readme progess"
+                  commit_message: "Update readme progess"
