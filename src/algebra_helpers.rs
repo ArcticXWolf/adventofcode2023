@@ -79,6 +79,30 @@ pub enum Point2Direction {
     NorthWest,
 }
 
+impl<T: Scalar> TryFrom<(Point2<T>, Point2<T>)> for Point2Direction
+where
+    T: std::ops::Neg<Output = T>,
+{
+    type Error = String;
+
+    fn try_from(value: (Point2<T>, Point2<T>)) -> Result<Self, Self::Error> {
+        match value.1 - value.0 {
+            Point::<T, 2>([x, y]) if x == T::zero() && y == -T::one() => Ok(Self::North),
+            Point::<T, 2>([x, y]) if x == T::one() && y == -T::one() => Ok(Self::NorthEast),
+            Point::<T, 2>([x, y]) if x == T::one() && y == T::zero() => Ok(Self::East),
+            Point::<T, 2>([x, y]) if x == T::one() && y == T::one() => Ok(Self::SouthEast),
+            Point::<T, 2>([x, y]) if x == T::zero() && y == T::one() => Ok(Self::South),
+            Point::<T, 2>([x, y]) if x == -T::one() && y == T::one() => Ok(Self::SouthWest),
+            Point::<T, 2>([x, y]) if x == -T::one() && y == T::zero() => Ok(Self::West),
+            Point::<T, 2>([x, y]) if x == -T::one() && y == -T::one() => Ok(Self::NorthWest),
+            _ => Err(format!(
+                "Could not find direction from {} to {}",
+                value.0, value.1
+            )),
+        }
+    }
+}
+
 impl Point2Direction {
     pub fn all_with_diagonals() -> Iter<'static, Self> {
         static D: [Point2Direction; 8] = [
@@ -123,6 +147,19 @@ impl Point2Direction {
             Self::South => Self::West,
             Self::West => Self::North,
             _ => unimplemented!(),
+        }
+    }
+
+    pub fn direction_flip(&self) -> Self {
+        match self {
+            Self::North => Self::South,
+            Self::East => Self::West,
+            Self::South => Self::North,
+            Self::West => Self::East,
+            Self::NorthEast => Self::SouthWest,
+            Self::SouthEast => Self::NorthWest,
+            Self::NorthWest => Self::SouthEast,
+            Self::SouthWest => Self::NorthEast,
         }
     }
 }
