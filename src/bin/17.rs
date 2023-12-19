@@ -102,15 +102,11 @@ impl City {
             }
         }
 
-        if let Some(result) = closed_nodes
+        closed_nodes
             .iter()
             .filter_map(|(&(p, _, _), c)| if p == ending_position { Some(*c) } else { None })
             .min()
-        {
-            Some((result, path))
-        } else {
-            None
-        }
+            .map(|result| (result, path))
     }
 
     fn ultra_cubicle_dijkstra(
@@ -186,15 +182,11 @@ impl City {
             }
         }
 
-        if let Some(result) = closed_nodes
+        closed_nodes
             .iter()
             .filter_map(|(&(p, _, _), c)| if p == ending_position { Some(*c) } else { None })
             .min()
-        {
-            Some((result, path))
-        } else {
-            None
-        }
+            .map(|result| (result, path))
     }
 
     fn get_cost_between_points(
