@@ -20,6 +20,8 @@ pub trait Scalar:
     + DivAssign
     + PartialEq
     + Eq
+    + PartialOrd
+    + Ord
     + Hash
 {
 }
@@ -35,6 +37,8 @@ impl<T> Scalar for T where
         + DivAssign
         + PartialEq
         + Eq
+        + PartialOrd
+        + Ord
         + Hash
 {
 }
@@ -204,6 +208,14 @@ impl<T: Scalar, const N: usize> Point<T, N> {
         self.0.iter().all(T::is_zero)
     }
 
+    pub fn one() -> Self {
+        std::array::from_fn(|_| T::one()).into()
+    }
+
+    pub fn is_one(&self) -> bool {
+        self.0.iter().all(T::is_one)
+    }
+
     pub fn origin() -> Self {
         Self::zero()
     }
@@ -280,6 +292,14 @@ impl<T: Scalar, const N: usize> Point<T, N> {
 
     pub fn length_manhattan(&self) -> T {
         self.0.iter().fold(T::zero(), |acc, e| acc + *e)
+    }
+
+    pub fn min_componentwise(&self, other: &Self) -> Self {
+        std::array::from_fn(|i| self.0[i].min(other.0[i])).into()
+    }
+
+    pub fn max_componentwise(&self, other: &Self) -> Self {
+        std::array::from_fn(|i| self.0[i].max(other.0[i])).into()
     }
 
     pub fn vec_to(self, other: Self) -> Point<T, N> {
@@ -397,6 +417,111 @@ impl<T: Scalar, const N: usize> Clone for Point<T, N> {
 }
 
 impl<T: Scalar, const N: usize> Copy for Point<T, N> {}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct PointRange<T: Scalar, const N: usize> {
+    pub min: Point<T, N>,
+    pub max: Point<T, N>, // exclusive
+}
+
+pub type Rectangle<T> = PointRange<T, 2>;
+pub type Cube<T> = PointRange<T, 3>;
+pub type Hypercube<T> = PointRange<T, 4>;
+
+impl<T: Scalar, const N: usize> Default for PointRange<T, N> {
+    fn default() -> Self {
+        Self {
+            min: Point::zero(),
+            max: Point::one(),
+        }
+    }
+}
+
+impl<T: Scalar, const N: usize> fmt::Debug for PointRange<T, N> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "PointRange")?;
+        write!(f, "[(")?;
+        for (i, e) in self.min.0.into_iter().enumerate() {
+            if i != 0 {
+                write!(f, ", ")?;
+            }
+            e.fmt(f)?;
+        }
+        write!(f, ")->(")?;
+        for (i, e) in self.max.0.into_iter().enumerate() {
+            if i != 0 {
+                write!(f, ", ")?;
+            }
+            e.fmt(f)?;
+        }
+        write!(f, ")]")
+    }
+}
+
+impl<T: Scalar, const N: usize> fmt::Display for PointRange<T, N> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "PointRange")?;
+        write!(f, "[(")?;
+        for (i, e) in self.min.0.into_iter().enumerate() {
+            if i != 0 {
+                write!(f, ", ")?;
+            }
+            e.fmt(f)?;
+        }
+        write!(f, ")->(")?;
+        for (i, e) in self.max.0.into_iter().enumerate() {
+            if i != 0 {
+                write!(f, ", ")?;
+            }
+            e.fmt(f)?;
+        }
+        write!(f, ")]")
+    }
+}
+
+impl<T: Scalar, const N: usize> PointRange<T, N> {
+    pub fn new(point1: Point<T, N>, point2: Point<T, N>) -> Self {
+        let min = point1.min_componentwise(&point2);
+        let max = point1.max_componentwise(&point2);
+        Self { min, max }
+    }
+
+    pub fn contains(&self, point: &Point<T, N>) -> bool {
+        (0..N).all(|i| self.min.0[i] <= point.0[i] && self.max.0[i] > point.0[i])
+    }
+
+    pub fn intersects(&self, other: &Self) -> bool {
+        !((0..N).any(|i| self.min.0[i] >= other.max.0[i] || other.min.0[i] >= self.max.0[i]))
+    }
+}
+
+impl<T: Scalar, const N: usize> ops::Add<Point<T, N>> for PointRange<T, N> {
+    type Output = Self;
+    fn add(self, rhs: Point<T, N>) -> Self::Output {
+        PointRange::new(self.min + rhs, self.max + rhs)
+    }
+}
+
+impl<T: Scalar, const N: usize> ops::AddAssign<Point<T, N>> for PointRange<T, N> {
+    fn add_assign(&mut self, rhs: Point<T, N>) {
+        self.min += rhs;
+        self.max += rhs;
+    }
+}
+
+impl<T: Scalar, const N: usize> ops::SubAssign<Point<T, N>> for PointRange<T, N> {
+    fn sub_assign(&mut self, rhs: Point<T, N>) {
+        self.min -= rhs;
+        self.max -= rhs;
+    }
+}
+
+impl<T: Scalar, const N: usize> ops::Sub<Point<T, N>> for PointRange<T, N> {
+    type Output = Self;
+    fn sub(self, rhs: Point<T, N>) -> Self::Output {
+        PointRange::new(self.min - rhs, self.max - rhs)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PointGrid<T: Scalar, const N: usize, U>(pub HashMap<Point<T, N>, U>);
@@ -662,5 +787,27 @@ mod tests {
                 Point2::new(1, 2),
             ]
         );
+    }
+
+    #[test]
+    fn test_point_ranges() {
+        let rect1: Rectangle<isize> = Rectangle::new(Point2::new(0, 0), Point2::new(10, 10));
+        let rect2: Rectangle<isize> = Rectangle::new(Point2::new(5, 5), Point2::new(15, 15));
+        let rect3: Rectangle<isize> = Rectangle::new(Point2::new(10, 10), Point2::new(20, 20));
+
+        assert!(rect1.intersects(&rect2));
+        assert!(rect2.intersects(&rect3));
+        assert!(!rect1.intersects(&rect3));
+        assert!(!rect3.intersects(&rect1));
+
+        assert!(rect1.contains(&Point2::new(0, 0)));
+        assert!(rect1.contains(&Point2::new(5, 5)));
+        assert!(!rect1.contains(&Point2::new(10, 10)));
+
+        let cube: Cube<isize> = Cube::new(Point3::new(1, 0, 1), Point3::new(2, 3, 2));
+        assert!(cube.contains(&Point3::new(1, 0, 1)));
+        assert!(cube.contains(&Point3::new(1, 1, 1)));
+        assert!(cube.contains(&Point3::new(1, 2, 1)));
+        assert!(!cube.contains(&Point3::new(1, 3, 1)));
     }
 }
