@@ -1,0 +1,13 @@
+vqj: rhn xhk szh
+rsh: frs zhb lsr
+xhk: vxr
+jbx: qnr szh lhk sml
+rhn: xhk sml vxr
+sml: xhk vxr
+zhb: lsr vxr szh
+qnr: szh
+ntq: vqj vxr sml xhk
+szh: lhk
+lsr: lhk
+rzs: qnr jbx lsr rsh
+frs: qnr lhk lsr
