@@ -189,6 +189,14 @@ impl<T: Scalar> Point<T, 3> {
     pub fn new(x: T, y: T, z: T) -> Self {
         Self([x, y, z])
     }
+
+    pub fn cross(self, other: Self) -> Self {
+        Self::new(
+            self.0[1] * other.0[2] - self.0[2] * other.0[1],
+            self.0[2] * other.0[0] - self.0[0] * other.0[2],
+            self.0[0] * other.0[1] - self.0[1] * other.0[0],
+        )
+    }
 }
 
 pub type Point4<T> = Point<T, 4>;
@@ -294,11 +302,17 @@ impl<T: Scalar, const N: usize> Point<T, N> {
         self.0.iter().fold(T::zero(), |acc, e| acc + *e)
     }
 
-    pub fn min_componentwise(&self, other: &Self) -> Self {
+    pub fn dot(self, other: Self) -> T {
+        (0..N)
+            .map(|d| self.0[d] * other.0[d])
+            .fold(T::zero(), |acc, e| acc + e)
+    }
+
+    pub fn min_componentwise(self, other: Self) -> Self {
         std::array::from_fn(|i| self.0[i].min(other.0[i])).into()
     }
 
-    pub fn max_componentwise(&self, other: &Self) -> Self {
+    pub fn max_componentwise(self, other: Self) -> Self {
         std::array::from_fn(|i| self.0[i].max(other.0[i])).into()
     }
 
@@ -481,8 +495,8 @@ impl<T: Scalar, const N: usize> fmt::Display for PointRange<T, N> {
 
 impl<T: Scalar, const N: usize> PointRange<T, N> {
     pub fn new(point1: Point<T, N>, point2: Point<T, N>) -> Self {
-        let min = point1.min_componentwise(&point2);
-        let max = point1.max_componentwise(&point2);
+        let min = point1.min_componentwise(point2);
+        let max = point1.max_componentwise(point2);
         Self { min, max }
     }
 
